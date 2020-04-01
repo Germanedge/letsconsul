@@ -12,7 +12,7 @@ import(
 	"syscall"
 	"os/signal"
 
-	"github.com/satori/go.uuid"
+	"github.com/hashicorp/go-uuid"
 	consul "github.com/hashicorp/consul/api"
 )
 
@@ -114,7 +114,12 @@ func (app *App) config() error {
 }
 
 func (app *App) register() error {
-	app.consulServiceID = uuid.NewV4().String()
+	id, err := uuid.GenerateUUID()
+	if err !=  nil {
+		return err
+	}
+
+	app.consulServiceID = id
 
 	checks := consul.AgentServiceChecks{
 		&consul.AgentServiceCheck{
