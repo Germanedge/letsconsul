@@ -80,7 +80,7 @@ stages:
           #docker ps |grep ag-postgres |cut -d " " -f 1 |xargs -I '{}' docker logs '{}'
           ping -c 2 consul
           # probably need to add some config into consuls kv here first
-          ./letsconsul -b 0.0.0.0:8080 -c consul:8500
+          /app/letsconsul -b 0.0.0.0:8080 -c consul:8500
 
 
   - stage: PublishImage
