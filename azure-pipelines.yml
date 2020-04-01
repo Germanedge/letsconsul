@@ -1,0 +1,117 @@
+# EdgeOne letsconsul Docker build pipeline 
+# Example: germanedge-docker/letsconsul:latest
+
+name: "edge-one-letsconsul_$(Date:yyyyMMdd)$(Rev:.r)"
+
+variables:
+  dockerId: "edge-one"  # Docker-ID for container registry service
+  imageName: "letsconsul"  # name of the image 
+  artifactRegistry: "germanedge-docker.artifactory"
+  artifactoryURL: "germanedge-docker.artifactory.new-solutions.com"
+
+trigger:
+- master
+- develop
+
+pr: none
+
+resources:
+  containers: 
+  - container: ubuntuintegrationtest
+    endpoint: germanedge-docker.artifactory
+    image: 'germanedge-docker.artifactory.new-solutions.com/$(dockerId)/ubuntu-integrationtest:master'
+  - container: consul
+    endpoint: germanedge-docker.artifactory
+    image: 'germanedge-docker.artifactory.new-solutions.com/$(dockerId)/consul:$(build.SourceBranchName)'
+    options: '--entrypoint /entrypoint-standalone.sh'
+  - container: letsconsul
+    endpoint: germanedge-docker.artifactory
+    image: 'germanedge-docker.artifactory.new-solutions.com/$(dockerId)/$(imageName):$(Build.BuildId)'
+
+stages: 
+  - stage: Build
+    jobs:
+    - job: 'CreateDocker_Linux'
+      displayName: 'creates a Docker image linux'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+      - task: Docker@2
+        displayName: 'Login to ACR'
+        inputs:
+          containerRegistry: '$(artifactRegistry)'
+          command: 'login'
+      - task: Docker@2
+        displayName: 'Build the image'
+        inputs:
+          repository: '$(dockerId)/$(imageName)'
+          command: 'build'
+          Dockerfile: 'Dockerfile'
+          arguments: -m 2g
+          buildContext: '.'
+          tags: |
+            $(Build.BuildId)
+            latest
+      - task: Docker@2
+        displayName: 'Push the image'
+        inputs:
+          containerRegistry: '$(artifactRegistry)'
+          repository: '$(dockerId)/$(imageName)'
+          command: 'Push'
+          tags: |
+            $(Build.BuildId)
+            latest
+
+  - stage: Integrationtest1
+    jobs:
+    - job: 'Integration_Test1'
+      displayName: 'Start the application directly in test-mode'
+      pool: 
+        vmImage: 'ubuntu-latest'
+      container: letsconsul
+      services:
+        consul: consul
+      steps:
+      - checkout: none
+      - script: |
+          pwd
+          whoami
+          ls -la
+          #docker ps |grep ag-postgres |cut -d " " -f 1 |xargs -I '{}' docker logs '{}'
+          ping -c 2 consul
+          # probably need to add some config into consuls kv here first
+          ./letsconsul -b 0.0.0.0:8080 -c consul:8500
+
+
+  - stage: PublishImage
+    jobs:
+    - job: 'Publish_Image'
+      displayName: 'publish image on if pervious stages are successful'
+      pool: 
+        vmImage: 'ubuntu-latest'
+      container: ubuntuintegrationtest
+      steps:
+      - task: Docker@2
+        displayName: 'Login to ACR'
+        inputs:
+          containerRegistry: '$(artifactRegistry)'
+          command: 'login'
+      - script: |
+          case $SOURCEBRANCHNAME in
+            master|develop)
+              echo "pulling $ARTIFACTORYURL/$DOCKERID/$IMAGENAME:$BUILDID"
+              docker pull $ARTIFACTORYURL/$DOCKERID/$IMAGENAME:$BUILDID
+              echo "tagging $BUILDID as $SOURCEBRANCHNAME"
+              docker tag $ARTIFACTORYURL/$DOCKERID/$IMAGENAME:$BUILDID $ARTIFACTORYURL/$DOCKERID/$IMAGENAME:$SOURCEBRANCHNAME
+              docker push $ARTIFACTORYURL/$DOCKERID/$IMAGENAME:$SOURCEBRANCHNAME
+              ;;
+            *)
+              echo "not tagging $SOURCEBRANCHNAME"
+          esac
+        displayName: Push image to artifactory
+        env:
+          SOURCEBRANCHNAME: $(build.SourceBranchName)
+          BUILDID: $(Build.BuildId)
+          ARTIFACTORYURL: $(artifactoryURL)
+          DOCKERID: $(dockerId)
+          IMAGENAME: $(imageName)
