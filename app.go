@@ -11,6 +11,7 @@ import(
 	"strconv"
 	"syscall"
 	"os/signal"
+	"fmt"
 
 	"github.com/hashicorp/go-uuid"
 	consul "github.com/hashicorp/consul/api"
@@ -39,26 +40,65 @@ func (app *App) consulConfigure() error {
 	}
 
 	if kvPair == nil {
-		return errors.New("Can't fetch 'service' key")
+		fmt.Printf("no config found, provisioning consul\n")
+
+                p := &consul.KVPair{Key: prefix + "/service", Value: []byte(prefix)}
+	        _, err = kv.Put(p, nil)
+	        if err != nil {
+	                return err
+	        }
+
+		p = &consul.KVPair{Key: prefix + "/renew_interval", Value: []byte(os.Getenv("RENEW_INTERVAL"))}
+		_, err = kv.Put(p, nil)
+		if err != nil {
+			return err
+		}
+
+		p = &consul.KVPair{Key: prefix + "/reload_interval", Value: []byte(os.Getenv("RELOAD_INTERVAL"))}
+	        _, err = kv.Put(p, nil)
+	        if err != nil {
+	                return err
+	        }
+
+		p = &consul.KVPair{Key: prefix + "/domains_enabled", Value: []byte("[\"" + os.Getenv("DOMAINS_ENABLED") + "\"]")}
+		_, err = kv.Put(p, nil)
+		if err != nil {
+			return err
+		}
+
+		p = &consul.KVPair{Key: prefix + "/domains/" + os.Getenv("DOMAINS_ENABLED") + "/domain_list" , Value: []byte("[\"" + os.Getenv("DOMAINS_ENABLED") + "\"]")}
+	        _, err = kv.Put(p, nil)
+	        if err != nil {
+	                return err
+	        }
+
+		p = &consul.KVPair{Key: prefix + "/domains/" + os.Getenv("DOMAINS_ENABLED") + "/email" , Value: []byte(os.Getenv("EMAIL"))}
+	        _, err = kv.Put(p, nil)
+	        if err != nil {
+	                return err
+	        }
+
+		p = &consul.KVPair{Key: prefix + "/domains/" + os.Getenv("DOMAINS_ENABLED") + "/timestamp", Value: []byte("0")}
+	        _, err = kv.Put(p, nil)
+	        if err != nil {
+	                return err
+	        }
+
 	}
 
 	app.ConsulService = string(kvPair.Value)
 
-	kvPair, _, err = kv.Get(prefix + "/renew_interval", nil)
+	kvPair_time, _, err := kv.Get(prefix + "/renew_interval", nil)
+	if err != nil {
+		        return err
+	}
+
+	app.RenewInterval, err = time.ParseDuration(string(kvPair_time.Value))
 	if err != nil {
 		return err
 	}
 
-	if kvPair == nil {
-		return errors.New("Can't fetch 'renew_interval' key")
-	}
-
-	app.RenewInterval, err = time.ParseDuration(string(kvPair.Value))
-	if err != nil {
-		return err
-	}
-
-	kvPair, _, err = kv.Get(prefix + "/reload_interval", nil)
+	kvPair_interval, _, err := kv.Get(prefix + "/reload_interval", nil)
 	if err != nil {
 		return err
 	}
@@ -67,7 +107,7 @@ func (app *App) consulConfigure() error {
 		return errors.New("Can't fetch 'reload_interval' key")
 	}
 
-	app.ReloadInterval, err = time.ParseDuration(string(kvPair.Value))
+	app.ReloadInterval, err = time.ParseDuration(string(kvPair_interval.Value))
 	if err != nil {
 		return err
 	}

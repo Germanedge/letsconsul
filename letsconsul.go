@@ -64,3 +64,4 @@ func (letsconsul *Letsconsul) get(client *consul.Client) error {
 	}
 	return nil
 }
+
