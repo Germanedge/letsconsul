@@ -84,6 +84,8 @@ func (app *App) consulConfigure() error {
 	                return err
 	        }
 
+		kvPair, _, err = kv.Get(prefix + "/service", nil)
+
 	}
 
 	app.ConsulService = string(kvPair.Value)
