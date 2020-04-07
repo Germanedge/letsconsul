@@ -15,7 +15,7 @@ import(
 	"github.com/go-acme/lego/certcrypto"
 	"github.com/go-acme/lego/certificate"
 	"github.com/go-acme/lego/challenge/http01"
-	"github.com/go-acme/lego/challenge/tlsalpn01"
+	//"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/registration"
 	consul "github.com/hashicorp/consul/api"
@@ -152,7 +152,7 @@ func (domainRecord *DomainRecord) renew(bind string) error {
 	config := lego.NewConfig(&myUser)
 
 	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
-	config.CADirURL = "http://192.168.99.100:4000/directory"
+	//config.CADirURL = "http://192.168.99.100:4000/directory"
 	config.Certificate.KeyType = certcrypto.RSA2048
 
 	// A client facilitates communication with the CA server.
@@ -169,10 +169,10 @@ func (domainRecord *DomainRecord) renew(bind string) error {
 	if err != nil {
 		return err
 	}
-	err = client.Challenge.SetTLSALPN01Provider(tlsalpn01.NewProviderServer("", "5001"))
-	if err != nil {
-		return err
-	}
+	//err = client.Challenge.SetTLSALPN01Provider(tlsalpn01.NewProviderServer("", "5001"))
+	//if err != nil {
+	//	return err
+	//}
 
 	// New users will need to register
 	reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
