@@ -1,0 +1,38 @@
+{
+    "name" : "letsconsul",
+    "jsonversion" : "1",
+    "description" : "Serve letsencrypt certificates in consul KV store",
+    "homepage" : "https://github.com/germanedge/ag-postgres",
+    "keywords" : ["consul", "LetsEncrypt", "certificates"],
+    "author" : "Christoph Heuwieser <Christoph.Heuwieser@crossvault.de>",
+    "contributors" : [],
+    "repository" : {
+    "type": "docker",
+    "url": "germanedge-docker.artifactory.new-solutions.com/edge-one/"
+    },
+    "entrypoint" : "entrypoint.sh",
+    "dockerfile" : "Dockerfile",
+    "version" : "",
+    "profiles" : {
+      "production" : {
+        "configuration" : {
+          "ports" : [],
+          "volumes" : [],
+          "environments" : []
+        },
+        "dependencies" : {
+          "consul" : ">=1.0.1 <2.0.0"
+        }
+      },
+      "development" : {
+        "configuration" : {
+          "ports" : [],
+          "volumes" : [],
+          "environments" : []
+        },
+        "dependencies" :{
+          "consul" : "develop"
+        }
+      }
+    }
+  }
